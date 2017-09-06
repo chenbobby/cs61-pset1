@@ -6,6 +6,10 @@
 #include <inttypes.h>
 #include <assert.h>
 
+
+//+ Initialize statistics object with values 0
+static struct m61_statistics stat_store = {0, 0, 0, 0, 0, 0, 0, 0};
+
 /// m61_malloc(sz, file, line)
 ///    Return a pointer to `sz` bytes of newly-allocated dynamic memory.
 ///    The memory is not initialized. If `sz == 0`, then m61_malloc may
@@ -14,7 +18,13 @@
 
 void* m61_malloc(size_t sz, const char* file, int line) {
     (void) file, (void) line;   // avoid uninitialized variable warnings
-    // Your code here.
+
+    //+ Increment total allocations count
+    stat_store.ntotal++;
+
+    //+ Increment active allocations count
+    stat_store.nactive++;
+    
     return base_malloc(sz);
 }
 
@@ -27,7 +37,8 @@ void* m61_malloc(size_t sz, const char* file, int line) {
 
 void m61_free(void *ptr, const char *file, int line) {
     (void) file, (void) line;   // avoid uninitialized variable warnings
-    // Your code here.
+
+
     base_free(ptr);
 }
 
@@ -75,9 +86,14 @@ void* m61_calloc(size_t nmemb, size_t sz, const char* file, int line) {
 ///    Store the current memory statistics in `*stats`.
 
 void m61_getstatistics(struct m61_statistics* stats) {
-    // Stub: set all statistics to enormous numbers
-    memset(stats, 255, sizeof(struct m61_statistics));
-    // Your code here.
+   stats->nactive = stat_store.nactive;
+   stats->active_size = stat_store.active_size;
+   stats->ntotal = stat_store.ntotal;
+   stats->total_size = stat_store.total_size;
+   stats->nfail = stat_store.nfail;
+   stats->fail_size = stat_store.fail_size;
+   stats->heap_min = stat_store.heap_min;
+   stats->heap_max = stat_store.heap_max;
 }
 
 
@@ -87,6 +103,7 @@ void m61_getstatistics(struct m61_statistics* stats) {
 void m61_printstatistics(void) {
     struct m61_statistics stats;
     m61_getstatistics(&stats);
+
 
     printf("malloc count: active %10llu   total %10llu   fail %10llu\n",
            stats.nactive, stats.ntotal, stats.nfail);
