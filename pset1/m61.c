@@ -19,13 +19,28 @@ static struct m61_statistics stat_store = {0, 0, 0, 0, 0, 0, 0, 0};
 void* m61_malloc(size_t sz, const char* file, int line) {
     (void) file, (void) line;   // avoid uninitialized variable warnings
 
+    void* new = base_malloc(sz);
+
+    if (new == NULL){
+        //+ Increment failed allocations count
+        stat_store.nfail++;
+
+        //+ Update failed allocation size
+        stat_store.fail_size += sz;
+
+        return new;
+    }
+
     //+ Increment total allocations count
     stat_store.ntotal++;
 
     //+ Increment active allocations count
     stat_store.nactive++;
-    
-    return base_malloc(sz);
+
+    //+ Update total allocation size
+    stat_store.total_size += sz;
+
+    return new;
 }
 
 
@@ -38,6 +53,11 @@ void* m61_malloc(size_t sz, const char* file, int line) {
 void m61_free(void *ptr, const char *file, int line) {
     (void) file, (void) line;   // avoid uninitialized variable warnings
 
+    //+ Decrement active allocations count
+    stat_store.nactive--;
+
+    //+ Update active allocation size
+    //TODO: Fetch block size from metadata
 
     base_free(ptr);
 }
