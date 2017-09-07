@@ -58,8 +58,7 @@ void* m61_malloc(size_t sz, const char* file, int line) {
         stat_store.active_size += *data_size;
 
 
-        void* data = block + metadata_size;
-        return data;
+        return (void*) block + metadata_size;
     }
 }
 
@@ -77,7 +76,7 @@ void m61_free(void *ptr, const char *file, int line) {
     stat_store.nactive--;
 
     //+ Update active allocation size
-    size_t* data_size = (size_t*) (ptr - metadata_size);
+    size_t* data_size = ptr - metadata_size;
     stat_store.active_size -= *data_size;
 
     base_free(ptr);
