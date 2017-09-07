@@ -10,6 +10,9 @@
 //+ Initialize statistics object with values 0
 static struct m61_statistics stat_store = {0, 0, 0, 0, 0, 0, 0, 0};
 
+//+ Initialize metadata size
+size_t metadata_size = 16;
+
 /// m61_malloc(sz, file, line)
 ///    Return a pointer to `sz` bytes of newly-allocated dynamic memory.
 ///    The memory is not initialized. If `sz == 0`, then m61_malloc may
@@ -19,28 +22,45 @@ static struct m61_statistics stat_store = {0, 0, 0, 0, 0, 0, 0, 0};
 void* m61_malloc(size_t sz, const char* file, int line) {
     (void) file, (void) line;   // avoid uninitialized variable warnings
 
-    void* new = base_malloc(sz);
+    void* block = base_malloc(metadata_size + sz);
 
-    if (new == NULL){
+    if (block == NULL){
+        //+ Memory Allocation Failure 
+        
+
         //+ Increment failed allocations count
         stat_store.nfail++;
 
         //+ Update failed allocation size
         stat_store.fail_size += sz;
 
-        return new;
+        return NULL;
+
+    } else {
+        //+ Memory Allocation Success
+        
+
+        //+ Create metadata
+        size_t* data_size = (size_t*) block;            //+ cast void* to size_t* so a value can be stored
+        *data_size = sz;
+
+
+        //+ Increment total allocations count
+        stat_store.ntotal++;
+
+        //+ Increment active allocations count
+        stat_store.nactive++;
+
+        //+ Update total allocation size
+        stat_store.total_size += *data_size;
+
+        //+ Update active allocation size
+        stat_store.active_size += *data_size;
+
+
+        void* data = block + metadata_size;
+        return data;
     }
-
-    //+ Increment total allocations count
-    stat_store.ntotal++;
-
-    //+ Increment active allocations count
-    stat_store.nactive++;
-
-    //+ Update total allocation size
-    stat_store.total_size += sz;
-
-    return new;
 }
 
 
@@ -57,7 +77,8 @@ void m61_free(void *ptr, const char *file, int line) {
     stat_store.nactive--;
 
     //+ Update active allocation size
-    //TODO: Fetch block size from metadata
+    size_t* data_size = (size_t*) (ptr - metadata_size);
+    stat_store.active_size -= *data_size;
 
     base_free(ptr);
 }

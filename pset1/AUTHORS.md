@@ -16,3 +16,16 @@ the class.)
 Citations
 ---------
 (List any other sources consulted.)
+
+StackOverflow Threads:
+
+ - https://stackoverflow.com/questions/4080673/uninitialized-structures-in-c
+ - https://stackoverflow.com/questions/5451104/how-to-get-memory-block-length-after-malloc
+ - https://stackoverflow.com/questions/3238482/pointer-subtraction-confusion
+ 
+
+
+3rd Party Documentation:
+
+ - https://www.tutorialspoint.com/c_standard_library/c_function_memset.htm
+
