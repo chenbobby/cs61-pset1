@@ -8,7 +8,7 @@
 
 
 //+ Initialize statistics object with values 0
-static struct m61_statistics stat_store = {0, 0, 0, 0, 0, 0, 0, 0};
+static struct m61_statistics stat_store = {0, 0, 0, 0, 0, 0, NULL, NULL};
 
 //+ Initialize metadata size
 size_t metadata_size = 16;
@@ -34,15 +34,18 @@ void* m61_malloc(size_t sz, const char* file, int line) {
         //+ Update failed allocation size
         stat_store.fail_size += sz;
 
-        return NULL;
+        return block;
 
     } else {
         //+ Memory Allocation Success
         
 
-        //+ Create metadata
+        //+ Create metadata pointer and set metadata
         size_t* data_size = (size_t*) block;            //+ cast void* to size_t* so a value can be stored
         *data_size = sz;
+
+        //+ Create data pointer
+        void* data = block + metadata_size;
 
 
         //+ Increment total allocations count
@@ -58,7 +61,18 @@ void* m61_malloc(size_t sz, const char* file, int line) {
         stat_store.active_size += *data_size;
 
 
-        return (void*) block + metadata_size;
+        //+ Update heap_min
+        if (stat_store.heap_min == NULL || data <= stat_store.heap_min) {
+            stat_store.heap_min = data;
+        }
+
+        //+ Update heap_max
+        if (stat_store.heap_max == NULL || data + sz >= stat_store.heap_max) {
+            stat_store.heap_max = data + sz;
+        }
+
+
+        return data;
     }
 }
 
@@ -72,12 +86,18 @@ void* m61_malloc(size_t sz, const char* file, int line) {
 void m61_free(void *ptr, const char *file, int line) {
     (void) file, (void) line;   // avoid uninitialized variable warnings
 
+    if (ptr == NULL) {
+        //+ Edge Case: free(NULL) is defined to not do anything.
+        return;
+    }
+
     //+ Decrement active allocations count
     stat_store.nactive--;
 
     //+ Update active allocation size
     size_t* data_size = ptr - metadata_size;
     stat_store.active_size -= *data_size;
+
 
     base_free(ptr);
 }
