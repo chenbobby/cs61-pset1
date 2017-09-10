@@ -6,12 +6,15 @@
 #include <inttypes.h>
 #include <assert.h>
 
+#define MEMORY_CAPACITY (size_t) -1
+
+struct metadata {
+    size_t data_size;
+};
+
 
 //+ Initialize statistics object with values 0
 static struct m61_statistics stat_store = {0, 0, 0, 0, 0, 0, NULL, NULL};
-
-//+ Initialize metadata size
-size_t metadata_size = 16;
 
 /// m61_malloc(sz, file, line)
 ///    Return a pointer to `sz` bytes of newly-allocated dynamic memory.
@@ -22,7 +25,21 @@ size_t metadata_size = 16;
 void* m61_malloc(size_t sz, const char* file, int line) {
     (void) file, (void) line;   // avoid uninitialized variable warnings
 
-    void* block = base_malloc(metadata_size + sz);
+    if(sz == (size_t) -1){
+        //+ Requested Memory Size Too Large
+
+
+        //+ Increment failed allocations count
+        stat_store.nfail++;
+
+        //+ Update failed allocation size
+        stat_store.fail_size += sz;
+
+        return NULL;
+    }
+
+    void* block = base_malloc(sizeof(struct metadata) + sz);
+
 
     if (block == NULL){
         //+ Memory Allocation Failure 
@@ -36,44 +53,45 @@ void* m61_malloc(size_t sz, const char* file, int line) {
 
         return block;
 
-    } else {
-        //+ Memory Allocation Success
-        
-
-        //+ Create metadata pointer and set metadata
-        size_t* data_size = (size_t*) block;            //+ cast void* to size_t* so a value can be stored
-        *data_size = sz;
-
-        //+ Create data pointer
-        void* data = block + metadata_size;
-
-
-        //+ Increment total allocations count
-        stat_store.ntotal++;
-
-        //+ Increment active allocations count
-        stat_store.nactive++;
-
-        //+ Update total allocation size
-        stat_store.total_size += *data_size;
-
-        //+ Update active allocation size
-        stat_store.active_size += *data_size;
-
-
-        //+ Update heap_min
-        if (stat_store.heap_min == NULL || data <= stat_store.heap_min) {
-            stat_store.heap_min = data;
-        }
-
-        //+ Update heap_max
-        if (stat_store.heap_max == NULL || data + sz >= stat_store.heap_max) {
-            stat_store.heap_max = data + sz;
-        }
-
-
-        return data;
     }
+
+    //+ Memory Allocation Success
+    
+    
+
+    //+ Create metadata pointer and set metadata
+    struct metadata* md_ptr = (struct metadata*) block;            //+ cast void* to size_t* so a value can be stored
+    md_ptr->data_size = sz;
+
+    //+ Create data pointer
+    void* data = block + sizeof(struct metadata);
+
+
+    //+ Increment total allocations count
+    stat_store.ntotal++;
+
+    //+ Increment active allocations count
+    stat_store.nactive++;
+
+    //+ Update total allocation size
+    stat_store.total_size += md_ptr->data_size;
+
+    //+ Update active allocation size
+    stat_store.active_size += md_ptr->data_size;
+
+
+    //+ Update heap_min by comparing address values
+    if (stat_store.heap_min == NULL || (uintptr_t) data <= (uintptr_t) stat_store.heap_min) {
+        stat_store.heap_min = data;
+    }
+
+    //+ Update heap_max by comparing address values
+    if (stat_store.heap_max == NULL || (uintptr_t) data + sz >= (uintptr_t) stat_store.heap_max) {
+        stat_store.heap_max = data + sz;
+    }
+
+
+    return data;
 }
 
 
@@ -95,7 +113,7 @@ void m61_free(void *ptr, const char *file, int line) {
     stat_store.nactive--;
 
     //+ Update active allocation size
-    size_t* data_size = ptr - metadata_size;
+    size_t* data_size = ptr - sizeof(struct metadata);
     stat_store.active_size -= *data_size;
 
 
@@ -113,12 +131,24 @@ void m61_free(void *ptr, const char *file, int line) {
 void* m61_realloc(void* ptr, size_t sz, const char* file, int line) {
     void* new_ptr = NULL;
     if (sz) {
-        new_ptr = m61_malloc(sz, file, line);
+
+        //+ Allocate 
+        new_ptr = base_malloc(sizeof(struct metadata) + sz);
+        
+        //+ Increment total allocation count
+        stat_store.ntotal++;
+
+        //+ Increment total allocation size
+        stat_store.total_size += sz;
     }
     if (ptr && new_ptr) {
         // Copy the data from `ptr` into `new_ptr`.
         // To do that, we must figure out the size of allocation `ptr`.
         // Your code here (to fix test014).
+        
+        new_ptr = (typeof (ptr)) new_ptr;
+        
+        size_t* old_sz = ptr - sizeof(struct metadata);
     }
     m61_free(ptr, file, line);
     return new_ptr;
@@ -146,14 +176,15 @@ void* m61_calloc(size_t nmemb, size_t sz, const char* file, int line) {
 ///    Store the current memory statistics in `*stats`.
 
 void m61_getstatistics(struct m61_statistics* stats) {
-   stats->nactive = stat_store.nactive;
-   stats->active_size = stat_store.active_size;
-   stats->ntotal = stat_store.ntotal;
-   stats->total_size = stat_store.total_size;
-   stats->nfail = stat_store.nfail;
-   stats->fail_size = stat_store.fail_size;
-   stats->heap_min = stat_store.heap_min;
-   stats->heap_max = stat_store.heap_max;
+    //+ Retrieve statistics from global store
+    stats->nactive = stat_store.nactive;
+    stats->active_size = stat_store.active_size;
+    stats->ntotal = stat_store.ntotal;
+    stats->total_size = stat_store.total_size;
+    stats->nfail = stat_store.nfail;
+    stats->fail_size = stat_store.fail_size;
+    stats->heap_min = stat_store.heap_min;
+    stats->heap_max = stat_store.heap_max;
 }
 
 
