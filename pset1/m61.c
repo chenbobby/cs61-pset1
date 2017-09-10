@@ -142,8 +142,8 @@ void* m61_realloc(void* ptr, size_t sz, const char* file, int line) {
         // Your code here (to fix test014).
         
         //+ Copy data from ptr to new_ptr
-        size_t* old_size = ptr - sizeof(struct metadata);
-        memcpy(new_ptr, ptr, *old_size);
+        size_t* new_size = new_ptr - sizeof(struct metadata);
+        memcpy(new_ptr, ptr, *new_size);
 
     }
     m61_free(ptr, file, line);
