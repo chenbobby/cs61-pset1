@@ -132,23 +132,19 @@ void* m61_realloc(void* ptr, size_t sz, const char* file, int line) {
     void* new_ptr = NULL;
     if (sz) {
 
-        //+ Allocate 
-        new_ptr = base_malloc(sizeof(struct metadata) + sz);
+        //+ Allocate using m61_alloc, which updates stats and makes metadata already
+        new_ptr = m61_malloc(sz, file, line);
         
-        //+ Increment total allocation count
-        stat_store.ntotal++;
-
-        //+ Increment total allocation size
-        stat_store.total_size += sz;
     }
     if (ptr && new_ptr) {
         // Copy the data from `ptr` into `new_ptr`.
         // To do that, we must figure out the size of allocation `ptr`.
         // Your code here (to fix test014).
         
-        new_ptr = (typeof (ptr)) new_ptr;
-        
-        size_t* old_sz = ptr - sizeof(struct metadata);
+        //+ Copy data from ptr to new_ptr
+        size_t* old_size = ptr - sizeof(struct metadata);
+        memcpy(new_ptr, ptr, *old_size);
+
     }
     m61_free(ptr, file, line);
     return new_ptr;
