@@ -11,6 +11,7 @@ Collaborators
 -------------
 (List any other collaborators and describe help you got from other people in
 the class.)
+Ada Lovelace
 
 
 Citations
